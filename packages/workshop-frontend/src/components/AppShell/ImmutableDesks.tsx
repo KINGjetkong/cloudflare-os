@@ -1,4 +1,21 @@
-import { useCallback } from 'react'
+import { useCallback, type ComponentType } from 'react'
+import {
+  Archive,
+  ArrowsLeftRight,
+  BookOpenText,
+  Books,
+  ChartBar,
+  ChartLineUp,
+  ChartPieSlice,
+  Flask,
+  GraduationCap,
+  Notebook,
+  Plugs,
+  Stack,
+  Strategy,
+  TerminalWindow,
+  type IconProps,
+} from '@phosphor-icons/react'
 import { useNavigate } from '@tanstack/react-router'
 import { useKumoToastManager } from '@cloudflare/kumo'
 import { useAuthenticatedApi } from '../../AuthContext'
@@ -25,23 +42,26 @@ type DeskTile = {
   id: ImmutableDeskId
   label: string
   blurb: string
+  icon: ComponentType<IconProps>
+  /** Logo tile colour (hex). */
+  tint: string
 }
 
 const DESKS: DeskTile[] = [
-  { id: 'madtrader', label: 'MadTrader', blurb: 'Live desk iframe · :8000' },
-  { id: 'data-fabric', label: 'Data APIs', blurb: 'UW · FA · TD · AM · OptionHUD' },
-  { id: 'algo-hub', label: 'Algo Hub', blurb: 'Sleeve cards + truncated nodes' },
-  { id: 'eng-wiki', label: 'Wiki', blurb: 'Engineering wiki · Devin pack' },
-  { id: 'journal', label: 'Journal', blurb: 'Trade journal · :3000' },
-  { id: 'edge-stats', label: 'Edge Stats', blurb: 'Edge dashboard · :3343' },
-  { id: 'vela', label: 'Vela', blurb: 'Charts playground · :5190' },
-  { id: 'lse', label: 'LSE', blurb: 'Charts + Python backtester' },
-  { id: 'quantdinger', label: 'Quant', blurb: 'Strategy / paper module' },
-  { id: 'enrich', label: 'ENRICH', blurb: 'Enrichment explorer' },
-  { id: 'academy', label: 'Academy', blurb: 'Operator wiki' },
-  { id: 'research-loop', label: 'Research', blurb: 'IS/OOS · luck bar · cells' },
-  { id: 'qc-mirror', label: 'QC Mirror', blurb: 'QuantConnect mirror' },
-  { id: 'runs', label: 'Runs', blurb: 'RUN bundle v1 lake' },
+  { id: 'madtrader', label: 'MadTrader', blurb: 'Live desk iframe · :8000', icon: ChartLineUp, tint: '#f6821f' },
+  { id: 'data-fabric', label: 'Data APIs', blurb: 'UW · FA · TD · AM · OptionHUD', icon: Plugs, tint: '#0ea5e9' },
+  { id: 'algo-hub', label: 'Algo Hub', blurb: 'Sleeve cards + truncated nodes', icon: Stack, tint: '#8b5cf6' },
+  { id: 'eng-wiki', label: 'Wiki', blurb: 'Engineering wiki · Devin pack', icon: BookOpenText, tint: '#64748b' },
+  { id: 'journal', label: 'Journal', blurb: 'Trade journal · :3000', icon: Notebook, tint: '#10b981' },
+  { id: 'edge-stats', label: 'Edge Stats', blurb: 'Edge dashboard · :3343', icon: ChartPieSlice, tint: '#ec4899' },
+  { id: 'vela', label: 'Vela', blurb: 'Charts playground · :5190', icon: ChartBar, tint: '#14b8a6' },
+  { id: 'lse', label: 'LSE', blurb: 'Charts + Python backtester', icon: TerminalWindow, tint: '#334155' },
+  { id: 'quantdinger', label: 'Quant', blurb: 'Strategy / paper module', icon: Strategy, tint: '#6366f1' },
+  { id: 'enrich', label: 'ENRICH', blurb: 'Enrichment explorer', icon: Books, tint: '#d97706' },
+  { id: 'academy', label: 'Academy', blurb: 'Operator wiki', icon: GraduationCap, tint: '#2563eb' },
+  { id: 'research-loop', label: 'Research', blurb: 'IS/OOS · luck bar · cells', icon: Flask, tint: '#dc2626' },
+  { id: 'qc-mirror', label: 'QC Mirror', blurb: 'QuantConnect mirror', icon: ArrowsLeftRight, tint: '#0891b2' },
+  { id: 'runs', label: 'Runs', blurb: 'RUN bundle v1 lake', icon: Archive, tint: '#78716c' },
 ]
 
 const PRIMARY_HUB_STORAGE_KEY = 'madx:primaryHubId'
@@ -151,8 +171,12 @@ export default function ImmutableDesks() {
               onClick={() => void openDesk(d.id)}
               className="press group flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-kumo-tint"
             >
-              <span className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg bg-kumo-fill text-[10px] font-bold tracking-wide text-kumo-brand uppercase">
-                APP
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
+                style={{ backgroundColor: d.tint }}
+              >
+                <d.icon size={18} weight="bold" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
