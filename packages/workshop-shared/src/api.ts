@@ -1077,7 +1077,7 @@ export const MAX_SITE_NAME_LENGTH = 40;
  * What this deployment calls itself when the admin has not set a custom `siteName`. Also the
  * product's own name, so it appears in prose the server and UI address to the user.
  */
-export const DEFAULT_SITE_NAME = "Cloudflare OS";
+export const DEFAULT_SITE_NAME = "MADX SIGMA6";
 
 /**
  * The name to display for this deployment. Accepts an unset or not-yet-loaded `siteName` so both
@@ -1626,6 +1626,13 @@ export type ServerConfig = {
    * locking everyone out.
    */
   passwordAuthEnabled: boolean;
+
+  /**
+   * When true, the login UI may offer a one-click "local demo admin" sign-in that uses the normal
+   * password login RPC with a locally provisioned account. Enabled only for the local workshop
+   * server (dev); always false in production Workers deploys. Contains no secrets.
+   */
+  demoSignInEnabled: boolean;
 
   /**
    * Whether the optional Cloudflare free-tier limits + top-up flow is enabled. When false (the

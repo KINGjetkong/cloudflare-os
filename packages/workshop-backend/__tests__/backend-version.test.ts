@@ -55,4 +55,9 @@ describe("getServerConfig", () => {
     expect((await config(EMPTY_ID)).backendVersion).toBeUndefined();
     expect((await config(UNBOUND)).backendVersion).toBeUndefined();
   });
+
+  it("enables demo sign-in only when DEMO_SIGN_IN_ENABLED is true", async () => {
+    expect((await config({})).demoSignInEnabled).toBe(false);
+    expect((await config({ DEMO_SIGN_IN_ENABLED: "true" })).demoSignInEnabled).toBe(true);
+  });
 });

@@ -82,6 +82,10 @@ declare global {
       // on to avoid locking everyone out).
       DISABLE_PASSWORD_AUTH?: string;
 
+      // Set to "true" on the local workshop server (run-dev-server) so the login UI can offer
+      // one-click sign-in as the provisioned local demo admin. Never set on production deploys.
+      DEMO_SIGN_IN_ENABLED?: string;
+
       // Enables the Cloudflare free-tier limits + top-up flow when set to "true".
       ENABLE_CLOUDFLARE_LIMITS?: string;
 

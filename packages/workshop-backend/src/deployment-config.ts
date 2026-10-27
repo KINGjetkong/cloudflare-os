@@ -55,6 +55,9 @@ export async function getServerConfig(env: Cloudflare.Env): Promise<ServerConfig
   return {
     authVendors,
     passwordAuthEnabled: isPasswordAuthEnabled(env),
+    // Local workshop server only (run-dev-server sets DEMO_SIGN_IN_ENABLED=true). Never true
+    // on production Workers deploys — the flag is absent there.
+    demoSignInEnabled: env.DEMO_SIGN_IN_ENABLED === "true",
     cloudflareLimitsEnabled: isCloudflareLimitsEnabled(env),
     signupsEnabled: config.signupsEnabled,
     userSearchEnabled: config.userSearchEnabled,

@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 
-    <!-- Prevents Gadget UI frames from navigating away from their srcdoc. DO NOT REMOVE. -->
-    <meta http-equiv="Content-Security-Policy" content="frame-src srcdoc:;">
+    <!-- Gadgets stay on srcdoc:; MADX vendor tabs iframe local engines under the shell. -->
+    <meta http-equiv="Content-Security-Policy" content="frame-src srcdoc: http://127.0.0.1:* http://localhost:* http://[::1]:*;" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
-    <title>Cloudflare OS</title>
+    <title>MADX SIGMA6</title>
   </head>
   <body>
     <div id="root"></div>

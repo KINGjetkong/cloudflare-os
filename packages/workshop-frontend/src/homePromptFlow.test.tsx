@@ -49,6 +49,7 @@ vi.mock("./features/chat/composer/ChatComposer", () => ({
 }));
 
 vi.mock("./components/MeshBackground", () => ({ default: () => null }));
+vi.mock("./components/AppShell/ImmutableDesks", () => ({ default: () => null }));
 vi.mock("./components/AppShell/HomeTaskSuggestions", () => ({ default: () => null }));
 vi.mock("./features/deployment-updates/UpdateAvailableNotice", () => ({ UpdateAvailableNotice: () => null }));
 vi.mock("./useDocumentTitle", () => ({ useDocumentTitle: () => {} }));

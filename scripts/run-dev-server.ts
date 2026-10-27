@@ -565,6 +565,9 @@ for (const gk of gatekeepers) {
   // For local testing, create an account named "admin" to test admin features.
   config.vars = config.vars || {};
   config.vars.ADMINS = ["admin"];
+  // Lets the login UI offer one-click sign-in as the provisioned local demo admin.
+  // Production wrangler.jsonc never sets this — production Workers stay unaffected.
+  config.vars.DEMO_SIGN_IN_ENABLED = "true";
 
   if (cloudflareOsDeployment !== undefined) {
     config.vars.CLOUDFLARE_OS_DEPLOYMENT = cloudflareOsDeployment;

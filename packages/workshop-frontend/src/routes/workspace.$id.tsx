@@ -9,6 +9,8 @@ type GadgetSearch = {
   // Show the chat even where the workspace pane hides it (a notification's "Open task" asks for
   // this). The editor drops it once honoured.
   showChat?: true
+  // Immutable desk tab (MadTrader, Data APIs, Algo Hub, …) — not a chat prompt.
+  desk?: string
 }
 
 function parseIntParam(value: unknown): number | undefined {
@@ -28,5 +30,6 @@ export const Route = createFileRoute('/workspace/$id')({
       : undefined,
     w: parseIntParam(search.w),
     showChat: search.showChat === true || undefined,
+    desk: typeof search.desk === 'string' && search.desk.length > 0 ? search.desk : undefined,
   }),
 })

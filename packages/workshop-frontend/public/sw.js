@@ -21,7 +21,7 @@ self.addEventListener("push", (event) => {
   // A userVisibleOnly subscription must show a notification for every push.
   let { title, body, path, tag } = typeof payload?.title === "string"
     ? payload
-    : { title: "Cloudflare OS" };
+    : { title: "MADX SIGMA6" };
   event.waitUntil(self.registration.showNotification(
     title, { body, tag, data: { path: workshopPath(path) } }));
 });
