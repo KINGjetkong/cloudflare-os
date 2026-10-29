@@ -37,7 +37,8 @@ const checkSpec = async (spec: unknown): Promise<unknown> => {
   try {
     const response = await fetch(`${BRIDGE_URL}/api/v1/widgets/validate`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      // text/plain keeps this a simple CORS request: Sigma Bridge allows no cross-origin POST preflight.
+      headers: { "content-type": "text/plain" },
       body: JSON.stringify(spec),
     });
     const verdict: unknown = await response.json();
