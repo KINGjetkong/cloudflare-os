@@ -115,6 +115,7 @@ import { copyToClipboard } from "./clipboard";
 import { isImeComposing } from "./keyboardEvent";
 import { formatAttachmentSize } from "./features/chat/attachmentFormatting";
 import { ChatComposer } from "./features/chat/composer/ChatComposer";
+import { MadxWidgetBlock, parseWidgetSource } from "./features/chat/MadxWidgetBlock";
 import { composerDraftStorageKey } from "./features/chat/composer/draft/composerDraft";
 import {
   findUnresolvedConflicts, listConflictedFiles, type UnresolvedConflict,
@@ -1167,6 +1168,15 @@ function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<"pre">) {
       typeof children.props.children === "string"
     ? children.props.children.replace(/\n$/, "")
     : "";
+  const language = isValidElement<{ className?: string }>(children)
+    ? children.props.className
+    : undefined;
+  const widgetSpec = language?.split(/\s+/).includes("language-madx-widget")
+    ? parseWidgetSource(code)
+    : undefined;
+  if (widgetSpec !== undefined) {
+    return <MadxWidgetBlock spec={widgetSpec} />;
+  }
 
   return (
     <div className={styles.codeBlock}>

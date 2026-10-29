@@ -18,6 +18,12 @@ interface LoginPageProps {
   onLoginSuccess?: () => void
 }
 
+/** Local workshop UI (loopback or trycloud tunnel to this Mac's :8788). */
+function isLocalDemoHost(): boolean {
+  const host = window.location.hostname
+  return host === 'localhost' || host === '127.0.0.1' || host.endsWith('.trycloudflare.com')
+}
+
 export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -29,6 +35,15 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
   const connectionLost = useConnectionLost()
   useDocumentTitle('Sign in')
 
+  const finishLogin = (token: string) => {
+    localStorage.setItem('authToken', token)
+    if (onLoginSuccess) {
+      onLoginSuccess()
+    } else {
+      window.location.reload()
+    }
+  }
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!username || !password || loading) return
@@ -39,17 +54,46 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
       const passwordHash = await hashPassword(username, password)
       const token = await rpcStub.login(username, passwordHash)
       if (token) {
-        localStorage.setItem('authToken', token)
-        if (onLoginSuccess) {
-          onLoginSuccess()
-        } else {
-          window.location.reload()
-        }
+        finishLogin(token)
       } else {
         setError('Invalid username or password')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * One-click local demo admin: same createAccount/login RPCs as typing the provisioned
+   * credentials from `.dev.vars.local-admin` (baked into the local frontend dist as VITE_DEV_*).
+   */
+  const handleDemoAdminSignIn = async () => {
+    const demoUsername = import.meta.env.VITE_DEV_USERNAME?.trim()
+    const demoPassword = import.meta.env.VITE_DEV_PASSWORD
+    if (!demoUsername || !demoPassword || loading) return
+    setLoading(true)
+    setError(null)
+
+    try {
+      const passwordHash = await hashPassword(demoUsername, demoPassword)
+      // Prefer login (account already provisioned). Fall back to createAccount then login,
+      // matching the existing local-dev auto-login path in main.tsx.
+      let token = await rpcStub.login(demoUsername, passwordHash)
+      if (!token) {
+        token = await rpcStub.createAccount(demoUsername, demoUsername, passwordHash)
+      }
+      if (!token) {
+        token = await rpcStub.login(demoUsername, passwordHash)
+      }
+      if (token) {
+        finishLogin(token)
+      } else {
+        setError('Local demo admin sign-in failed. Re-run the local admin bootstrap, then rebuild the frontend dist.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Local demo admin sign-in failed')
     } finally {
       setLoading(false)
     }
@@ -85,6 +129,12 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
 
   const authVendors = serverConfig.authVendors ?? []
   const passwordAuthEnabled = serverConfig.passwordAuthEnabled
+  const demoUsername = import.meta.env.VITE_DEV_USERNAME?.trim() ?? ''
+  const demoPassword = import.meta.env.VITE_DEV_PASSWORD ?? ''
+  const showDemoAdminButton =
+    passwordAuthEnabled &&
+    Boolean(demoUsername && demoPassword) &&
+    (serverConfig.demoSignInEnabled || isLocalDemoHost())
 
   return (
     <div className="relative flex h-full min-h-0 flex-col items-center justify-start overflow-y-auto bg-kumo-base px-4 py-8">
@@ -113,6 +163,26 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
 
         {passwordAuthEnabled && (
           <>
+            {showDemoAdminButton && (
+              <div className="mb-6 space-y-3">
+                <Button
+                  type="button"
+                  variant="primary"
+                  loading={loading}
+                  disabled={loading}
+                  className="w-full justify-center"
+                  onClick={() => { void handleDemoAdminSignIn() }}
+                >
+                  I&apos;m an admin
+                </Button>
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-kumo-line" />
+                  <span className="text-xs text-kumo-subtle">or sign in</span>
+                  <div className="h-px flex-1 bg-kumo-line" />
+                </div>
+              </div>
+            )}
+
             {/* Username / password form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
@@ -120,7 +190,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
                 label="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                autoFocus
+                autoFocus={!showDemoAdminButton}
                 autoComplete="username"
                 disabled={loading}
                 placeholder="your-username"
@@ -143,7 +213,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
 
               <Button
                 type="submit"
-                variant="primary"
+                variant={showDemoAdminButton ? 'secondary' : 'primary'}
                 disabled={!username || !password}
                 loading={loading}
                 className="w-full justify-center"

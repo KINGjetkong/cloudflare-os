@@ -258,6 +258,41 @@ body {
   left: env(safe-area-inset-left);
 }
 
+/* iPhone Duo / foldable unfolded: keep Primary Hub chat | MadTrader split across the hinge.
+   Overrides the phone stack (`max-md:hidden` / mobile tab bar) when the UA exposes dual segments. */
+@media (horizontal-viewport-segments: 2) {
+  .primary-hub-body {
+    flex-direction: row !important;
+  }
+
+  .primary-hub-body > [data-hub-pane="chat"],
+  .primary-hub-body > [data-hub-pane="workspace"] {
+    display: flex !important;
+    max-width: none !important;
+    opacity: 1 !important;
+  }
+
+  .primary-hub-body > [data-hub-pane="chat"] {
+    /* Prefer left viewport segment when env() is available; fall back to ~42% */
+    width: env(viewport-segment-width 0 0, 42%) !important;
+    flex: 0 0 env(viewport-segment-width 0 0, 42%) !important;
+  }
+
+  .primary-hub-body > [data-hub-pane="workspace"] {
+    width: auto !important;
+    flex: 1 1 env(viewport-segment-width 1 0, 58%) !important;
+  }
+
+  .primary-hub-body > [data-hub-resize] {
+    display: block !important;
+    width: 1px !important;
+  }
+
+  [data-hub-mobile-bar] {
+    display: none !important;
+  }
+}
+
 @layer utilities {
   /* Turns a Kumo Dialog into a keyboard-safe bottom sheet on phones (and very short windows).
      The `body` prefix and !important are load-bearing: they out-rank both Kumo's own dialog

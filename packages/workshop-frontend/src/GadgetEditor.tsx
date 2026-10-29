@@ -39,6 +39,22 @@ import WorkpieceCodeInterface from './features/code/WorkpieceCodeInterface'
 import type { ChatContentReader } from './features/code/otClient'
 import GadgetUI from './GadgetUI'
 import GadgetUseView from './GadgetUseView'
+import MadTraderSurface from './MadTraderSurface'
+import VendorLiveSurface, {
+  ACADEMY_SPEC,
+  ALGO_HUB_SPEC,
+  DATA_FABRIC_SPEC,
+  EDGE_STATS_SPEC,
+  ENG_WIKI_SPEC,
+  ENRICH_SPEC,
+  LSE_TERMINAL_SPEC,
+  QC_MIRROR_SPEC,
+  QUANTDINGER_SPEC,
+  RESEARCH_LOOP_SPEC,
+  RUNS_SPEC,
+  TRADE_JOURNAL_SPEC,
+  VELA_SPEC,
+} from './VendorLiveSurface'
 import Connections from './Connections'
 import Activity, { type ActivityView } from './Activity'
 import { CountBadge } from './components/CountBadge'
@@ -164,7 +180,41 @@ function formatConsoleLogs(logs: BufferedLogEntry[]): string {
 
 // ─── right-panel tabs ─────────────────────────────────────────────────────────
 
-type RightTab = 'app' | 'code' | 'connections'
+type RightTab =
+  | 'madtrader'
+  | 'lse'
+  | 'quantdinger'
+  | 'enrich'
+  | 'journal'
+  | 'edge-stats'
+  | 'vela'
+  | 'academy'
+  | 'algo-hub'
+  | 'data-fabric'
+  | 'research-loop'
+  | 'qc-mirror'
+  | 'runs'
+  | 'eng-wiki'
+  | 'app'
+  | 'code'
+  | 'connections'
+
+const VENDOR_DESK_TABS: RightTab[] = [
+  'madtrader',
+  'lse',
+  'quantdinger',
+  'enrich',
+  'journal',
+  'edge-stats',
+  'vela',
+  'academy',
+  'algo-hub',
+  'data-fabric',
+  'research-loop',
+  'qc-mirror',
+  'runs',
+  'eng-wiki',
+]
 
 type WorkspaceView =
   | { mode: 'chat' }
@@ -182,9 +232,30 @@ function formatHeaderCost(cost: number) {
 // a document blueprint), falling back to "App" when it declares no format. A worktree has no app
 // and no bindings, so it gets only Code.
 function rightTabs(summary: WorkpieceSummary | undefined): { value: RightTab; label: string }[] {
-  if (summary?.type === 'worktree') return [{ value: 'code', label: 'Code' }]
+  // MADX SIGMA6: live vendor forks as real right-pane tabs (not catalog footnotes).
+  const vendorTabs: { value: RightTab; label: string }[] = [
+    { value: 'madtrader', label: 'MadTrader' },
+    { value: 'lse', label: 'LSE' },
+    { value: 'quantdinger', label: 'Quant' },
+    { value: 'enrich', label: 'ENRICH' },
+    { value: 'journal', label: 'Journal' },
+    { value: 'edge-stats', label: 'Edge Stats' },
+    { value: 'vela', label: 'Vela' },
+    { value: 'academy', label: 'Academy' },
+    { value: 'algo-hub', label: 'Algo Hub' },
+    { value: 'data-fabric', label: 'Data APIs' },
+    { value: 'research-loop', label: 'Research' },
+    { value: 'qc-mirror', label: 'QC Mirror' },
+    { value: 'runs', label: 'Runs' },
+    { value: 'eng-wiki', label: 'Wiki' },
+  ]
+  if (summary?.type === 'worktree') {
+    return [...vendorTabs, { value: 'code', label: 'Code' }]
+  }
   return [
-    { value: 'app', label: formatOf(summary?.output).noun },
+    ...vendorTabs,
+    // "App" confused Josh into thinking AI gadgets were MadTrader — label the fake surface clearly.
+    { value: 'app', label: `Gadget · ${formatOf(summary?.output).noun}` },
     { value: 'code', label: 'Code' },
     { value: 'connections', label: 'Connections' },
   ]
@@ -363,7 +434,12 @@ const isBrowser = typeof window !== 'undefined'
 // Below Tailwind's `md` breakpoint the chat and the workspace pane take turns filling the screen
 // (the `max-md:` classes in the layout below), where above it they sit side by side. The query is
 // the one `max-md:` compiles to, so the two agree at fractional widths and at any root font size.
-const isSinglePaneLayout = () => window.matchMedia?.('(width < 48rem)').matches ?? false
+// iPhone Duo / foldables open: dual horizontal viewport segments → keep Primary Hub split.
+const isSinglePaneLayout = () => {
+  if (!window.matchMedia) return false
+  if (window.matchMedia('(horizontal-viewport-segments: 2)').matches) return false
+  return window.matchMedia('(width < 48rem)').matches
+}
 
 function clampChatWidth(width: number) {
   if (!isBrowser) return Math.max(MIN_CHAT_WIDTH, Math.min(DEFAULT_CHAT_WIDTH, width))
@@ -468,10 +544,13 @@ export default function GadgetEditor() {
   const { authenticatedApi } = useAuthenticatedApi()
   const publicApi = useRpcStub()
 
-  const { chat: chatParam, w: workpieceParam, showChat: showChatParam } =
-    useSearch({ strict: false }) as { chat?: number; w?: number; showChat?: true }
+  const { chat: chatParam, w: workpieceParam, showChat: showChatParam, desk: deskParam } =
+    useSearch({ strict: false }) as { chat?: number; w?: number; showChat?: true; desk?: string }
   const urlChatId = chatParam !== undefined ? chatParam : null
   const urlWorkpieceId = workpieceParam !== undefined ? workpieceParam : null
+  const deskFromUrl = (deskParam && VENDOR_DESK_TABS.includes(deskParam as RightTab))
+    ? (deskParam as RightTab)
+    : null
 
   // ── toasts ─────────────────────────────────────────────────────────────────────
   const toasts = useKumoToastManager()
@@ -534,7 +613,9 @@ export default function GadgetEditor() {
   const [chatWidth, setChatWidth] = useState(getInitialChatWidth)
   const chatWidthRef = useRef(chatWidth)
   const [isResizing, setIsResizing] = useState(false)
-  const [chosenTab, setActiveTab] = useState<RightTab>('app')
+  // Default RIGHT pane = live MadTrader (Primary Hub split). Switch to App/Code for Make drafts.
+  // ?desk= opens an immutable vendor tab (Data APIs, Algo Hub, …) — not a chat prompt.
+  const [chosenTab, setActiveTab] = useState<RightTab>(() => deskFromUrl ?? 'madtrader')
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView | null>(() =>
     getStoredWorkspaceView(id)
   )
@@ -542,6 +623,14 @@ export default function GadgetEditor() {
   const activityReturnViewRef = useRef<WorkspaceView | null>(null)
   const [activityView, setActivityView] = useState<ActivityView>('history')
   const [activityClosing, setActivityClosing] = useState(false)
+
+  useEffect(() => {
+    if (!deskFromUrl) return
+    setActiveTab(deskFromUrl)
+    setWorkspaceTransitionEnabled(true)
+    setActivityClosing(false)
+    setWorkspaceView(prev => (prev?.mode === 'app' ? prev : { mode: 'app' }))
+  }, [deskFromUrl])
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [blueprintModalOpen, setBlueprintModalOpen] = useState(false)
   const [blueprintUpdateDialogOpen, setBlueprintUpdateDialogOpen] = useState(false)
@@ -787,7 +876,11 @@ export default function GadgetEditor() {
   const blueprintUpdateAvailable =
     useBlueprintUpdateAvailable(publicApi, selectedGadgetSummary?.upstream)
   // A worktree has only Code; the chosen tab is remembered for the next gadget.
-  const activeTab: RightTab = selectedWorkpieceSummary?.type === 'worktree' ? 'code' : chosenTab
+  // Worktrees still expose MadTrader; only force Code when the user has not picked MadTrader.
+  const activeTab: RightTab =
+    selectedWorkpieceSummary?.type === 'worktree' && chosenTab !== 'madtrader'
+      ? 'code'
+      : chosenTab
 
   // Lazily normalize legacy "open" preferences once the accepted app list is known. Draft apps
   // remain session-only until accepted; at that point this effect persists them automatically.
@@ -901,8 +994,14 @@ export default function GadgetEditor() {
   const hasAnyApps = allGadgets.length > 0 || allWorktrees.length > 0
   const hasVisibleWorkpieces = visibleWorkpieces.length > 0
   const showingActivity = workspaceView?.mode === 'activity'
+  // MADX Primary Hub: on desktop / Duo, chat | MadTrader must stay split even with zero gadgets.
+  // Gadget drafts must not gate the live desk iframe (CV: pane width collapsed to 0).
+  const primaryHubSplit = layoutModeReady && !isSinglePaneLayout()
   const showFullEditor = layoutModeReady && (
-    showingActivity || (hasVisibleWorkpieces && (workspaceView === null ? !simpleMode : workspaceView.mode === 'app'))
+    showingActivity
+    || primaryHubSplit
+    || workspaceView?.mode === 'app'
+    || (hasVisibleWorkpieces && (workspaceView === null ? !simpleMode : false))
   )
   const showOutputRail = layoutModeReady && hasAnyApps && !showFullEditor
   const paneShowsActivity = showingActivity || activityClosing
@@ -1133,6 +1232,12 @@ export default function GadgetEditor() {
     let output = turnOutputRef.current
     if (output?.chatId === selectedChatIdRef.current) output.userSelectedTab = true
     setActiveTab(tab)
+    // Vendor desk tabs reopen the right pane (mobile stack + after "Close gadget pane").
+    if (VENDOR_DESK_TABS.includes(tab)) {
+      setWorkspaceTransitionEnabled(true)
+      setActivityClosing(false)
+      setWorkspaceView(prev => (prev?.mode === 'app' ? prev : { mode: 'app' }))
+    }
   }, [])
 
   useEffect(() => {
@@ -1539,13 +1644,14 @@ export default function GadgetEditor() {
 
   const openMobilePane = (tab: RightTab) => {
     handleTabSelect(tab)
-    if (selectedWorkpieceId !== null) setWorkspaceVisibility('open', selectedWorkpieceId)
+    // MadTrader / vendor tabs must open without a gadget workpiece.
+    setWorkspaceVisibility('open', selectedWorkpieceId ?? undefined)
   }
 
   // The mobile bar's workpiece tab: a gadget's preview, or -- since a worktree has nothing to
   // preview -- its code. The "More" menu lights up for whatever else the pane is showing.
-  const mobilePrimaryTab: RightTab = selectedWorkpieceSummary?.type === 'worktree' ? 'code' : 'app'
-  const mobilePreviewActive = showFullEditor && !paneShowsActivity && activeTab === 'app'
+  const mobilePrimaryTab: RightTab = 'madtrader'
+  const mobilePreviewActive = showFullEditor && !paneShowsActivity && activeTab === 'madtrader'
   const mobilePrimaryActive = showFullEditor && !paneShowsActivity && activeTab === mobilePrimaryTab
   const mobileMoreActive = showFullEditor && !paneShowsActivity && activeTab !== mobilePrimaryTab
 
@@ -1718,7 +1824,10 @@ export default function GadgetEditor() {
         </div>
       </div>
 
-      <div className="flex h-12 shrink-0 items-center gap-1 border-b border-kumo-line bg-kumo-base px-2 md:hidden">
+      <div
+        data-hub-mobile-bar=""
+        className="flex h-12 shrink-0 items-center gap-1 border-b border-kumo-line bg-kumo-base px-2 md:hidden"
+      >
         <button
           type="button"
           onClick={() => setWorkspaceVisibility('closed')}
@@ -1732,13 +1841,12 @@ export default function GadgetEditor() {
         <button
           type="button"
           onClick={() => openMobilePane(mobilePrimaryTab)}
-          disabled={mobilePrimaryTab === 'app' ? !selectedGadgetStub : selectedWorkpieceSummary === undefined}
           aria-current={mobilePrimaryActive ? 'page' : undefined}
-          className={`flex h-9 min-w-0 flex-1 items-center justify-center rounded-lg px-3 text-[14px] font-medium disabled:opacity-40 ${
+          className={`flex h-9 min-w-0 flex-1 items-center justify-center rounded-lg px-3 text-[14px] font-medium ${
             mobilePrimaryActive ? 'bg-kumo-tint text-kumo-default' : 'text-kumo-subtle'
           }`}
         >
-          {mobilePrimaryTab === 'app' ? 'Preview' : 'Code'}
+          MadTrader
         </button>
         <button
           type="button"
@@ -1868,7 +1976,7 @@ export default function GadgetEditor() {
       </div>
 
       {/* ═══ BODY ═════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-1 min-h-0 relative overflow-hidden">
+      <div className="primary-hub-body flex flex-1 min-h-0 relative overflow-hidden">
 
         {isAgentActive && (
           <div
@@ -1883,6 +1991,7 @@ export default function GadgetEditor() {
 
         {/* ── LEFT: Chat pane ──────────────────────────────────────────────────── */}
         <div
+          data-hub-pane="chat"
           className={`flex flex-col flex-shrink-0 max-md:!w-full ${showFullEditor ? 'max-md:hidden' : ''} ${workspaceTransitionClass} ${showFullEditor ? 'border-r border-kumo-line' : ''}`}
           style={{
             width: showFullEditor
@@ -1947,6 +2056,7 @@ export default function GadgetEditor() {
 
         {/* ── Resize handle ───────────────────────────────────────────────────── */}
         <div
+          data-hub-resize=""
           className={`relative flex-shrink-0 touch-none cursor-col-resize overflow-visible bg-kumo-line max-md:hidden ${workspaceTransitionClass}`}
           style={{ width: showFullEditor ? 1 : 0 }}
           onPointerDown={handleResizePointerDown}
@@ -1959,6 +2069,7 @@ export default function GadgetEditor() {
 
         {/* ── RIGHT: App / Code / Connections tabs ───────────────────────────── */}
         <div
+          data-hub-pane="workspace"
           className={`flex flex-shrink-0 min-w-0 overflow-hidden bg-kumo-base max-md:!w-full max-md:!opacity-100 ${!showFullEditor ? 'max-md:hidden' : ''} ${workspaceTransitionClass}`}
           style={{
             width: showFullEditor ? `calc(100% - ${chatWidth}px - 1px)` : 0,
@@ -2071,6 +2182,49 @@ export default function GadgetEditor() {
               </div>
             )}
             <div className={paneShowsActivity ? 'hidden' : 'contents'}>
+            <div className={activeTab === 'madtrader' && !previewMode ? 'h-full' : 'hidden'}>
+              <MadTraderSurface height="100%" />
+            </div>
+            <div className={activeTab === 'lse' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={LSE_TERMINAL_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'quantdinger' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={QUANTDINGER_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'enrich' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={ENRICH_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'journal' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={TRADE_JOURNAL_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'edge-stats' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={EDGE_STATS_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'vela' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={VELA_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'academy' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={ACADEMY_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'algo-hub' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={ALGO_HUB_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'data-fabric' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={DATA_FABRIC_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'research-loop' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={RESEARCH_LOOP_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'qc-mirror' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={QC_MIRROR_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'runs' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={RUNS_SPEC} height="100%" />
+            </div>
+            <div className={activeTab === 'eng-wiki' && !previewMode ? 'h-full' : 'hidden'}>
+              <VendorLiveSurface spec={ENG_WIKI_SPEC} height="100%" />
+            </div>
+
             <div
               ref={fullscreenOverlayRef}
               tabIndex={isGadgetFullscreen ? -1 : undefined}
@@ -2086,17 +2240,26 @@ export default function GadgetEditor() {
               }
             >
               {selectedGadgetStub && !previewMode ? (
-                <GadgetUI
-                  key={selectedGadgetId}
-                  gadget={selectedGadgetStub}
-                  height="100%"
-                  reloadTrigger={uiReloadTrigger}
-                  isVisible={activeTab === 'app' && !previewMode}
-                  chatId={previewChatId}
-                  onConsoleLog={handleClientConsoleLog}
-                  onIframeEscape={isGadgetFullscreen ? exitGadgetFullscreen : undefined}
-                  onNoUiChange={handleNoUiChange}
-                />
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="shrink-0 border-b border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] leading-4 text-kumo-default">
+                    This is an <span className="font-semibold">AI Gadget</span> — not MadTrader.
+                    For the real desk, click the <span className="font-semibold">MadTrader</span> tab
+                    (live Vibe at 127.0.0.1:8000). Discard fake trading desks with simulated data.
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    <GadgetUI
+                      key={selectedGadgetId}
+                      gadget={selectedGadgetStub}
+                      height="100%"
+                      reloadTrigger={uiReloadTrigger}
+                      isVisible={activeTab === 'app' && !previewMode}
+                      chatId={previewChatId}
+                      onConsoleLog={handleClientConsoleLog}
+                      onIframeEscape={isGadgetFullscreen ? exitGadgetFullscreen : undefined}
+                      onNoUiChange={handleNoUiChange}
+                    />
+                  </div>
+                </div>
               ) : !previewMode && (
                 <NoGadgetPlaceholder height="100%" />
               )}

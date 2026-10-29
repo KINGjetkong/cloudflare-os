@@ -4,7 +4,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useKumoToastManager } from "@cloudflare/kumo";
 import { ChatComposer } from "../features/chat/composer/ChatComposer";
 import MeshBackground from "../components/MeshBackground";
-import HomeTaskSuggestions from "../components/AppShell/HomeTaskSuggestions";
+import ImmutableDesks from "../components/AppShell/ImmutableDesks";
 import { UpdateAvailableNotice } from "../features/deployment-updates/UpdateAvailableNotice";
 import { useAuthenticatedApi } from "../AuthContext";
 import { RpcStub } from "capnweb";
@@ -187,10 +187,10 @@ export function HomePageContent({ prompt }: HomeSearch) {
         {/* Hero */}
         <header className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight leading-tight text-kumo-default sm:text-4xl">
-            What are we working on?
+            MADX SIGMA6
           </h1>
           <p className="mx-auto mt-3 max-w-md text-[14px] leading-5 tracking-[-0.25px] text-kumo-subtle">
-            Ask a question, create an output, or create an app that works with your tools and data.
+            Trading workspace — ask · make · build · run with your desks, data, and agents.
           </p>
         </header>
 
@@ -214,12 +214,8 @@ export function HomePageContent({ prompt }: HomeSearch) {
             : undefined}
         />
 
-        {/* A few example work tasks to spark ideas. Picking one seeds the composer above. */}
-        <HomeTaskSuggestions
-          onPick={(suggestion) =>
-            setSeed((prev) => ({ text: suggestion, nonce: (prev?.nonce ?? 0) + 1 }))
-          }
-        />
+        {/* Immutable desks — real shell tabs, not Get Started chat prompts. */}
+        <ImmutableDesks />
       </div>
     </div>
   );
